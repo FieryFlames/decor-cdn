@@ -1,32 +1,66 @@
-/**
- * Welcome to Cloudflare Workers! This is your first worker.
- *
- * - Run `npm run dev` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your worker in action
- * - Run `npm run deploy` to publish your worker
- *
- * Learn more at https://developers.cloudflare.com/workers/
- */
-
 export interface Env {
-	// Example binding to KV. Learn more at https://developers.cloudflare.com/workers/runtime-apis/kv/
-	// MY_KV_NAMESPACE: KVNamespace;
-	//
-	// Example binding to Durable Object. Learn more at https://developers.cloudflare.com/workers/runtime-apis/durable-objects/
-	// MY_DURABLE_OBJECT: DurableObjectNamespace;
-	//
-	// Example binding to R2. Learn more at https://developers.cloudflare.com/workers/runtime-apis/r2/
-	// MY_BUCKET: R2Bucket;
-	//
-	// Example binding to a Service. Learn more at https://developers.cloudflare.com/workers/runtime-apis/service-bindings/
-	// MY_SERVICE: Fetcher;
-	//
-	// Example binding to a Queue. Learn more at https://developers.cloudflare.com/queues/javascript-apis/
-	// MY_QUEUE: Queue;
+	API_URL: string;
+	UGC: R2Bucket;
+
 }
 
+export interface Decoration {
+	hash: string;
+	animated: boolean;
+	alt: string | null;
+	authorId: string | null;
+	reviewed: boolean | null;
+	presetId: string | null;
+}
+
+async function getDecoration(hash: string, env: Env): Promise<Decoration | null> {
+	const decorationReq = await fetch(`${env.API_URL}/decorations/${hash}`);
+	console.log(decorationReq)
+	if (decorationReq.ok) return decorationReq.json();
+	return null;
+}
+
+function isDecorationApproved(decoration: Decoration): boolean {
+	return decoration.reviewed !== false;
+}
+
+const TTL_1_YEAR = 60 * 60 * 24 * 365;
+const TTL_1_DAY = 60 * 60 * 24;
+const TTL_1_HOUR = 60 * 60;
+
+// https://decorcdn.fieryflames.dev/abcdefg.png
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-		return new Response('Hello World!');
+		const cache = caches.default;
+		const cachedResponse = await cache.match(request);
+		if (cachedResponse) return cachedResponse;
+
+		const url = new URL(request.url);
+
+		const filename = url.pathname.slice(1);
+		if (!filename.endsWith('.png')) return new Response('Not Found', { status: 404 });
+
+		let hash = filename.slice(0, -4);
+		if (hash.startsWith('a_')) hash = hash.slice(2);
+
+		const decoration = await getDecoration(hash, env);
+		console.log(decoration);
+		if (!decoration) return new Response('Decoration not found', { status: 404 });
+
+		const object = await env.UGC.get(filename);
+		if (!object) return new Response('Not Found', { status: 404 });
+
+		const ttl = isDecorationApproved(decoration) ? TTL_1_YEAR : TTL_1_HOUR;
+
+		const headers = new Headers({
+			'Content-Type': 'image/png',
+			'Cache-Control': `public, max-age=${ttl}`,
+		});
+
+		const response = new Response(object.body, { headers });
+
+		await cache.put(request, response.clone());
+
+		return response;
 	},
 };
