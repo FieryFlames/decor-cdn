@@ -15,7 +15,6 @@ export interface Decoration {
 
 async function getDecoration(hash: string, env: Env): Promise<Decoration | null> {
 	const decorationReq = await fetch(`${env.API_URL}/decorations/${hash}`);
-	console.log(decorationReq)
 	if (decorationReq.ok) return decorationReq.json();
 	return null;
 }
@@ -44,7 +43,6 @@ export default {
 		if (hash.startsWith('a_')) hash = hash.slice(2);
 
 		const decoration = await getDecoration(hash, env);
-		console.log(decoration);
 		if (!decoration) return new Response('Decoration not found', { status: 404 });
 
 		const object = await env.UGC.get(filename);
