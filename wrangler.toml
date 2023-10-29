@@ -2,7 +2,6 @@ name = "decor-cdn"
 main = "src/index.ts"
 compatibility_date = "2023-10-16"
 account_id = "2cd868518b615a2b78f1109d22620667"
-tail_consumers=[{service = "decor-cdn-tail"}]
 
 [vars]
 API_URL = "https://decor.fieryflames.dev/api"
