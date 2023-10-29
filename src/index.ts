@@ -1,7 +1,6 @@
 export interface Env {
 	API_URL: string;
 	UGC: R2Bucket;
-
 }
 
 export interface Decoration {
