@@ -22,6 +22,10 @@ function isDecorationApproved(decoration: Decoration): boolean {
 	return decoration.reviewed !== false;
 }
 
+const BASE_HEADERS = {
+	'Access-Control-Allow-Origin': '*',
+};
+
 const TTL_1_YEAR = 60 * 60 * 24 * 365;
 const TTL_1_DAY = 60 * 60 * 24;
 const TTL_1_HOUR = 60 * 60;
@@ -36,20 +40,21 @@ export default {
 		const url = new URL(request.url);
 
 		const filename = url.pathname.slice(1);
-		if (!filename.endsWith('.png')) return new Response('Not Found', { status: 404 });
+		if (!filename.endsWith('.png')) return new Response('Not Found', { status: 404, headers: new Headers(BASE_HEADERS) });
 
 		let hash = filename.slice(0, -4);
 		if (hash.startsWith('a_')) hash = hash.slice(2);
 
 		const decoration = await getDecoration(hash, env);
-		if (!decoration) return new Response('Decoration not found', { status: 404 });
+		if (!decoration) return new Response('Decoration not found', { status: 404, headers: new Headers(BASE_HEADERS) });
 
 		const object = await env.UGC.get(filename);
-		if (!object) return new Response('Not Found', { status: 404 });
+		if (!object) return new Response('Not Found', { status: 404, headers: new Headers(BASE_HEADERS) });
 
 		const ttl = isDecorationApproved(decoration) ? TTL_1_YEAR : TTL_1_HOUR;
 
 		const headers = new Headers({
+			...BASE_HEADERS,
 			'Content-Type': 'image/png',
 			'Cache-Control': `public, max-age=${ttl}`,
 		});
