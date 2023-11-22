@@ -18,6 +18,10 @@ async function getDecoration(hash: string, env: Env): Promise<Decoration | null>
 	return null;
 }
 
+function getFileName(hash: string, animated: boolean): string {
+	return `${animated ? 'a_' : ''}${hash}.png`;
+}
+
 function isDecorationApproved(decoration: Decoration): boolean {
 	return decoration.reviewed !== false;
 }
@@ -48,7 +52,9 @@ export default {
 		const decoration = await getDecoration(hash, env);
 		if (!decoration) return new Response('Decoration not found', { status: 404, headers: new Headers(BASE_HEADERS) });
 
-		const object = await env.UGC.get(filename);
+		const animate = decoration.animated && (url.searchParams.get("animate") === "true" ?? filename.startsWith('a_'));
+
+		const object = await env.UGC.get(getFileName(hash, animate));
 		if (!object) return new Response('Not Found', { status: 404, headers: new Headers(BASE_HEADERS) });
 
 		const ttl = isDecorationApproved(decoration) ? TTL_1_YEAR : TTL_1_HOUR;
