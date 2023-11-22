@@ -53,7 +53,7 @@ export default {
 		if (!decoration) return new Response('Decoration not found', { status: 404, headers: new Headers(BASE_HEADERS) });
 
 		const animateParam = url.searchParams.get("animate")
-		const animate = decoration.animated && ((!!animateParam && animateParam === "true") ?? filename.startsWith('a_'));
+		const animate = decoration.animated && ((animateParam ? animateParam === "true" : null) ?? filename.startsWith('a_'));
 
 		const object = await env.UGC.get(getFileName(hash, animate));
 		if (!object) return new Response('Not Found', { status: 404, headers: new Headers(BASE_HEADERS) });
